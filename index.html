@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FlowWatch: find pipe leaks before the wall shows them</title>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eceeed;--panel:#f8f9f8;--ink:#0b254b;--muted:#566774;--line:#cfd6d9;--water:#0d6aa8;--alert:#f0b400;--r:6px;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1a20;--panel:#16252d;--ink:#e8eef0;--muted:#9fb0b8;--line:#2a3c45;--water:#4aa8e0}}
+:root[data-theme="dark"]{--bg:#0f1a20;--panel:#16252d;--ink:#e8eef0;--muted:#9fb0b8;--line:#2a3c45;--water:#4aa8e0}
+html{scroll-padding-top:env(safe-area-inset-top,0px);scroll-behavior:smooth}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 1.05rem/1.6 "Instrument Sans",system-ui,sans-serif}
+h1,h2,h3{font-family:"Bricolage Grotesque",system-ui,sans-serif;line-height:1.1;margin:0 0 .5em}
+a{color:var(--water)}
+:focus-visible{outline:3px solid var(--alert);outline-offset:2px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 1.25rem}
+header{background:var(--panel);border-bottom:1px solid var(--line)}
+header .wrap{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding-top:.8rem;padding-bottom:.8rem}
+.brand{display:block;line-height:0}.brand img{height:42px;width:auto;display:block}
+nav a{margin-left:1.1rem;color:var(--ink);text-decoration:none;font-weight:500;padding-bottom:2px}
+nav a[aria-current="page"]{border-bottom:3px solid var(--alert)}
+.view{display:none;padding:2.5rem 0 3rem}.view.on{display:block}
+.hero .wrap{display:grid;grid-template-columns:1.1fr 1fr;gap:2.5rem;align-items:center}
+.hero h1{font-size:clamp(2.2rem,5vw,3.5rem);font-weight:800;letter-spacing:-.02em}
+.hero p,.muted{color:var(--muted)}.hero p{max-width:46ch}
+.btns{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1.4rem}
+.btn{display:inline-block;font:600 1rem inherit;font-family:inherit;padding:.65rem 1.15rem;border-radius:var(--r);border:2px solid var(--ink);background:transparent;color:var(--ink);text-decoration:none;cursor:pointer}
+.btn.pri{background:var(--ink);color:var(--bg)}.btn.pri:hover{background:var(--water);border-color:var(--water);color:#fff}
+.btn:not(.pri):hover{background:var(--panel)}
+svg.art{width:100%;height:auto}
+.art .b{stroke:var(--line);stroke-width:1.5;fill:none}.art .pipe,.art .drip{fill:var(--water)}
+.art .ring{fill:none;stroke:var(--alert);stroke-width:3;transform-box:fill-box;transform-origin:center;opacity:0;animation:ping 2.4s ease-out infinite}
+.art .ring:nth-of-type(2){animation-delay:.8s}.art .ring:nth-of-type(3){animation-delay:1.6s}
+@keyframes ping{0%{transform:scale(.3);opacity:.9}100%{transform:scale(1.6);opacity:0}}
+@media (prefers-reduced-motion:reduce){.art .ring{animation:none;opacity:.6}html{scroll-behavior:auto}}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem;margin-top:2.5rem}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:1.3rem}
+.panel p{color:var(--muted);margin:0 0 1rem}
+.shop{display:grid;grid-template-columns:1fr 300px;gap:1.5rem;align-items:start}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;overflow:hidden}
+.thumb{aspect-ratio:4/3;background:var(--line);display:grid;place-items:center;color:var(--muted);font:700 1rem "Bricolage Grotesque",sans-serif}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.card .bd{padding:.9rem;display:flex;flex-direction:column;gap:.3rem;flex:1}
+.card h3{font-size:1.05rem;margin:0}.card .d{color:var(--muted);font-size:.92rem;flex:1}.price{font-weight:700}
+.card .btn{margin-top:.4rem;padding:.5rem}
+.cart{position:sticky;top:1rem}
+.row{display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.5rem 0;border-bottom:1px solid var(--line);font-size:.95rem}
+.qty button{width:1.8rem;height:1.8rem;border:1px solid var(--ink);background:transparent;color:var(--ink);border-radius:var(--r);cursor:pointer;font:inherit}
+.total{display:flex;justify-content:space-between;font-weight:700;margin:.8rem 0}
+form{display:grid;gap:1rem;max-width:560px}
+label{display:grid;gap:.3rem;font-weight:500}
+input,select,textarea{font:inherit;padding:.55rem .65rem;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);color:var(--ink);width:100%}
+fieldset{border:1px solid var(--line);border-radius:var(--r);padding:.8rem 1rem}
+fieldset label{display:flex;gap:.6rem;align-items:center;font-weight:400;margin:.25rem 0}
+fieldset input{width:auto}
+.out{margin-top:1.5rem;max-width:560px}.out[hidden]{display:none}
+.lvl{font:800 1.6rem "Bricolage Grotesque",sans-serif}
+.bar{height:10px;background:var(--line);border-radius:99px;overflow:hidden;margin:.6rem 0 1rem}.bar i{display:block;height:100%;background:var(--water);width:0;transition:width .4s}
+.ok{border-left:4px solid var(--alert)}
+footer{border-top:1px solid var(--line);color:var(--muted);font-size:.9rem;padding:1.5rem 0}
+@media (max-width:820px){.hero .wrap,.cols,.shop{grid-template-columns:1fr}.cart{position:static}nav a{margin:0 .8rem 0 0}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <a class="brand" href="#home" aria-label="FlowWatch home"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/logo-light.png"><img src="assets/logo.png" alt="FlowWatch" width="195" height="42"></picture></a>
+  <nav aria-label="Main"><a href="#home" data-nav="home">Home</a><a href="#shop" data-nav="shop">Shop</a><a href="#check" data-nav="check">Risk checker</a><a href="#book" data-nav="book">Book a technician</a></nav>
+</div></header>
+
+<main>
+<section class="view hero" id="v-home"><div class="wrap">
+  <div>
+    <h1>Hear the leak before the wall shows it.</h1>
+    <p>Water leaking inside a wall makes a sound long before it leaves a stain. Buy acoustic sensors and monitorable pipes, or have a local technician fit them for you.</p>
+    <div class="btns"><a class="btn pri" href="#shop">Shop sensors and pipes</a><a class="btn" href="#check">Check my leak risk</a></div>
+  </div>
+  <svg class="art" viewBox="0 0 400 300" role="img" aria-label="Wall cross-section with a leaking pipe sending out sound rings">
+    <rect x="10" y="10" width="380" height="280" rx="6" fill="var(--panel)" stroke="var(--line)" stroke-width="2"/>
+    <g class="b"><path d="M10 70H390M10 130H390M10 190H390M10 250H390"/><path d="M90 10V70M230 10V70M330 10V70M40 70V130M170 70V130M300 70V130M90 130V190M230 130V190M350 130V190M40 190V250M170 190V250M300 190V250M90 250V290M230 250V290"/></g>
+    <rect class="pipe" x="10" y="140" width="380" height="26" rx="4"/>
+    <circle class="ring" cx="230" cy="153" r="40"/><circle class="ring" cx="230" cy="153" r="40"/><circle class="ring" cx="230" cy="153" r="40"/>
+    <path class="drip" d="M230 172c-7 11-10 17-10 22a10 10 0 0 0 20 0c0-5-3-11-10-22z"/><circle cx="230" cy="153" r="5" fill="var(--ink)"/>
+  </svg>
+</div>
+<div class="wrap cols" style="grid-column:1/-1">
+  <div class="panel"><h3>Buy the gear</h3><p>Acoustic sensors, starter kits and pipes made to be monitored.</p><a class="btn" href="#shop">Browse products</a></div>
+  <div class="panel"><h3>Get it installed</h3><p>Already own sensors? Request a technician and pick a date.</p><a class="btn" href="#book">Book a technician</a></div>
+  <div class="panel"><h3>Check your risk</h3><p>Answer a few questions about your building and get a leak risk score.</p><a class="btn" href="#check">Start the check</a></div>
+</div></section>
+
+<section class="view" id="v-shop"><div class="wrap">
+  <h1>Sensors and pipes</h1>
+  <div class="shop">
+    <div class="grid" id="grid"></div>
+    <aside class="panel cart" aria-live="polite"><h3>Your cart</h3><div id="cartRows"></div><div class="total"><span>Total</span><span id="cartTotal">₹0</span></div><button class="btn pri" id="checkout" type="button" style="width:100%">Checkout</button><p class="muted" id="cartMsg" style="margin:.7rem 0 0;font-size:.9rem"></p></aside>
+  </div>
+</div></section>
+
+<section class="view" id="v-check"><div class="wrap">
+  <h1>Leak risk checker</h1>
+  <p class="muted" style="max-width:56ch">Answer a few questions about your building. This is a rough guide, not a diagnosis: a technician can confirm with sensors.</p>
+  <form id="riskForm">
+    <label>Age of the building<select id="age"><option value="0">Under 10 years</option><option value="1">10 to 25 years</option><option value="2">25 to 40 years</option><option value="3">Over 40 years</option></select></label>
+    <label>Main pipe material<select id="mat"><option value="0">PVC or CPVC</option><option value="1">Copper</option><option value="3">GI (galvanised iron)</option><option value="2">Not sure</option></select></label>
+    <label>Water pressure<select id="prs"><option value="0">Normal</option><option value="2">Very high</option><option value="1">Not sure</option></select></label>
+    <fieldset><legend>What have you noticed?</legend>
+      <label><input type="checkbox" value="3" name="sign"> Damp patches or peeling paint on walls</label>
+      <label><input type="checkbox" value="2" name="sign"> Musty smell indoors</label>
+      <label><input type="checkbox" value="2" name="sign"> Water bill rising with no change in use</label>
+      <label><input type="checkbox" value="3" name="sign"> Hissing or dripping sound from a wall</label>
+    </fieldset>
+    <div><button class="btn pri" type="submit">Check my risk</button></div>
+  </form>
+  <div class="panel out ok" id="riskOut" hidden aria-live="polite">
+    <div class="lvl" id="lvl"></div><div class="bar"><i id="barFill"></i></div><p id="advice" style="color:var(--ink)"></p>
+    <div class="btns" style="margin-top:0"><a class="btn pri" href="#shop">See sensors</a><a class="btn" href="#book">Book a technician</a></div>
+  </div>
+</div></section>
+
+<section class="view" id="v-book"><div class="wrap">
+  <h1>Book a technician</h1>
+  <p class="muted" style="max-width:56ch">Already have sensors? Tell us where and when. Technician matching arrives with the full version, so for now your request is saved in this browser.</p>
+  <form id="bookForm">
+    <label>Your name<input id="bName" required autocomplete="name"></label>
+    <label>Phone<input id="bPhone" type="tel" required autocomplete="tel"></label>
+    <label>City<input id="bCity" required autocomplete="address-level2"></label>
+    <label>Address<input id="bAddr" required autocomplete="street-address"></label>
+    <label>Preferred date<input id="bDate" type="date" required></label>
+    <label>Sensors to install<select id="bCount"><option>1</option><option>2</option><option>3</option><option>4 or more</option></select></label>
+    <label>Details<textarea id="bDet" rows="3" placeholder="Which wall or pipe, and what you have noticed"></textarea></label>
+    <div><button class="btn pri" type="submit">Send request</button></div>
+  </form>
+  <div class="panel out ok" id="bookOut" hidden aria-live="polite"></div>
+  <h2 style="margin-top:2.5rem">Your requests</h2>
+  <div id="reqList" class="muted">No requests yet.</div>
+</div></section>
+</main>
+
+<footer><div class="wrap">FlowWatch: watching your water so you don’t have to. A student project in development, with placeholder prices.</div></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+// Paste your own values from Supabase: Project Settings > API. Use ONLY the anon public key, never service_role.
+const SUPABASE_URL="PASTE_YOUR_PROJECT_URL_HERE";
+const SUPABASE_ANON_KEY="PASTE_YOUR_ANON_PUBLIC_KEY_HERE";
+let PRODUCTS=[
+ {id:"s1",name:"Acoustic Leak Sensor",d:"Wall-mount sensor that listens for the hiss of a leaking pipe.",p:1999,c:"sensor"},
+ {id:"s2",name:"Sensor Starter Kit (3 units)",d:"Three sensors and a hub to cover a small flat.",p:4999,c:"sensor"},
+ {id:"s3",name:"Monitorable Pipe, 3 m",d:"Pipe section with sensor mounting points built in.",p:899,c:"pipe"},
+ {id:"s4",name:"Sensor Mounting Kit",d:"Clamps and adhesive pads for fixing sensors to pipes.",p:299,c:"accessory"}
+];
+/* Loads real products from Supabase. If it is not configured or fails, the sample products above stay. */
+async function loadProducts(){
+  if(SUPABASE_URL.startsWith("PASTE")||SUPABASE_ANON_KEY.startsWith("PASTE"))return;
+  try{
+    const db=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+    const {data,error}=await db.from("products").select("id,name,description,price_inr,category,image_url").order("created_at",{ascending:true});
+    if(error)throw error;
+    if(data&&data.length)PRODUCTS=data.map(x=>({id:x.id,name:x.name,d:x.description||"",p:Number(x.price_inr),c:x.category,i:x.image_url||""}));
+  }catch(e){console.error("Could not load products from Supabase:",e)}
+}
+const inr=n=>new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(n);
+const $=id=>document.getElementById(id);
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
+function load(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f}catch(e){return f}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+
+/* Routing: #home, #shop, #check, #book */
+const views=["home","shop","check","book"];
+function route(){
+  const h=(location.hash||"#home").slice(1);const v=views.includes(h)?h:"home";
+  views.forEach(n=>{$("v-"+n).classList.toggle("on",n===v);});
+  document.querySelectorAll("[data-nav]").forEach(a=>{if(a.dataset.nav===v)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});
+  window.scrollTo(0,0);
+}
+addEventListener("hashchange",route);
+
+/* Shop and cart */
+let cart=load("ww_cart",{});
+function renderShop(){
+  const g=$("grid");g.textContent="";
+  PRODUCTS.forEach(p=>{
+    const c=el("article","card"),t=el("div","thumb",p.c),b=el("div","bd");
+    if(p.i&&p.i.startsWith("https://")){
+      const img=document.createElement("img");img.src=p.i;img.alt=p.name;img.loading="lazy";
+      img.onerror=()=>{t.textContent=p.c};
+      t.textContent="";t.appendChild(img);
+    }
+    const btn=el("button","btn pri","Add to cart");btn.type="button";
+    btn.addEventListener("click",()=>{cart[p.id]=(cart[p.id]||0)+1;save("ww_cart",cart);$("cartMsg").textContent="";renderCart()});
+    b.append(el("h3","",p.name),el("p","d",p.d),el("div","price",inr(p.p)),btn);c.append(t,b);g.appendChild(c);
+  });
+}
+function renderCart(){
+  const box=$("cartRows");box.textContent="";let total=0;const ids=Object.keys(cart).filter(i=>cart[i]>0);
+  if(!ids.length)box.appendChild(el("p","muted","Your cart is empty."));
+  ids.forEach(id=>{
+    const p=PRODUCTS.find(x=>x.id===id);if(!p)return;total+=p.p*cart[id];
+    const r=el("div","row"),n=el("span","",p.name),q=el("span","qty");
+    const m=el("button","","−"),pl=el("button","","+"),cnt=el("span","",` ${cart[id]} `);
+    m.type=pl.type="button";m.setAttribute("aria-label","Remove one "+p.name);pl.setAttribute("aria-label","Add one "+p.name);
+    m.onclick=()=>{cart[id]--;if(cart[id]<1)delete cart[id];save("ww_cart",cart);renderCart()};
+    pl.onclick=()=>{cart[id]++;save("ww_cart",cart);renderCart()};
+    q.append(m,cnt,pl);r.append(n,q);box.appendChild(r);
+  });
+  $("cartTotal").textContent=inr(total);
+}
+$("checkout").addEventListener("click",()=>{
+  $("cartMsg").textContent=Object.keys(cart).length?"Payments aren’t connected yet. This is where Razorpay checkout will go.":"Add something to your cart first.";
+});
+
+/* Risk checker */
+$("riskForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  let s=+$("age").value+ +$("mat").value+ +$("prs").value;
+  document.querySelectorAll("input[name=sign]:checked").forEach(c=>s+=+c.value);
+  const max=18;let L,A;
+  if(s>=10){L="High risk";A="Several warning signs point to a possible hidden leak. Book a technician soon to confirm it with sensors, and consider turning off water at the main if you see damp spreading."}
+  else if(s>=5){L="Moderate risk";A="Some factors raise your chance of a hidden leak. Fit an acoustic sensor on the most at-risk pipe run and recheck after a week."}
+  else{L="Low risk";A="Nothing here suggests a leak right now. A sensor on your main supply pipe is a cheap way to stay ahead of problems."}
+  $("lvl").textContent=`${L} (${s} of ${max})`;$("barFill").style.width=Math.round(s/max*100)+"%";$("advice").textContent=A;$("riskOut").hidden=false;
+});
+
+/* Booking */
+let reqs=load("ww_reqs",[]);
+function renderReqs(){
+  const b=$("reqList");b.textContent="";
+  if(!reqs.length){b.textContent="No requests yet.";return}
+  reqs.slice().reverse().forEach(r=>{
+    const c=el("div","panel");c.style.marginBottom=".7rem";
+    c.append(el("strong","",`${r.id}: ${r.city}`),el("div","muted",`${r.date}, ${r.count} sensor(s). ${r.addr}`),el("div","",`Status: ${r.status}`));
+    b.appendChild(c);
+  });
+}
+$("bookForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const r={id:"REQ-"+String(reqs.length+101),name:$("bName").value.trim(),city:$("bCity").value.trim(),addr:$("bAddr").value.trim(),date:$("bDate").value,count:$("bCount").value,status:"Open, waiting for a technician"};
+  reqs.push(r);save("ww_reqs",reqs);renderReqs();
+  const o=$("bookOut");o.textContent=`Thanks, ${r.name}. Request ${r.id} is saved. A technician will be able to accept it once matching is live.`;o.hidden=false;e.target.reset();
+});
+
+renderShop();renderCart();renderReqs();route();
+loadProducts().then(()=>{renderShop();renderCart()});
+</script>
+</body>
+</html>
